@@ -10,14 +10,17 @@
 body{
   margin:0;
   min-height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
   font-family:"Times New Roman", serif;
+
   background:#111 url("images/hcm.jpg") center center no-repeat fixed;
   background-size:contain;
+
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
 }
 
+/* nền mờ */
 body::before{
   content:"";
   position:fixed;
@@ -29,27 +32,26 @@ body::before{
 
 /* ===== SÁCH ===== */
 .book{
-  width:640px;
-  height:900px;
+  width:clamp(320px, 96vw, 640px);
+  height:clamp(480px, 92vh, 900px);
   perspective:3500px;
   position:relative;
+  margin-top:10px;
 }
 
-/* TỜ */
+/* ===== TỜ SÁCH ===== */
 .sheet{
   position:absolute;
   inset:0;
   background:#fff;
   transform-origin:top center;
   transition:transform 1s ease;
-  cursor:pointer;
   overflow:hidden;
 }
 
-/* trạng thái lật */
 .sheet.flipped{
   transform:rotateX(-180deg);
-  pointer-events:none; /* tờ đã lật không nhận click */
+  pointer-events:none;
 }
 
 /* ===== 1 TRANG ===== */
@@ -71,7 +73,7 @@ body::before{
   overflow:hidden;
 }
 
-/* ép khít */
+/* ép khít vừa đủ */
 .double .page:first-child img{ margin-bottom:-4px; }
 .double .page:last-child img{ margin-top:-4px; }
 
@@ -85,32 +87,14 @@ body::before{
 /* ===== NÚT NHẠC ===== */
 .music-btn{
   position:fixed;
-  bottom:24px;
-  right:24px;
-  padding:12px 16px;
+  bottom:20px;
+  right:20px;
+  padding:10px 14px;
   border-radius:30px;
   border:1px solid rgba(255,255,255,.3);
   background:rgba(0,0,0,.6);
   color:#fff;
   cursor:pointer;
-}
-/* ===== MOBILE FIX ===== */
-@media (max-width: 768px){
-  .book{
-    width: 92vw;      /* chiếm gần hết ngang màn hình */
-    height: 88vh;     /* cao vừa đủ để đọc */
-  }
-
-  body{
-    align-items: center;
-  }
-}
-@media (max-width: 768px){
-  .book{
-    width: 96vw;
-    height: calc(100vh - 20px);
-    margin-top: 10px;
-  }
 }
 </style>
 </head>
@@ -132,19 +116,17 @@ let current = 0;
 let z = 1000;
 let busy = false;
 
-/* ===== TẠO 1 TRANG ===== */
+/* ===== TẠO TRANG ===== */
 function singlePage(src, clickable=true){
   const s = document.createElement("div");
   s.className = "sheet single";
   s.style.zIndex = z--;
   s.innerHTML = `<img src="${src}">`;
-  if(clickable) s.addEventListener("click", clickHandler);
-  else s.style.pointerEvents="none";
+  if(!clickable) s.style.pointerEvents="none";
   book.appendChild(s);
   sheets.push(s);
 }
 
-/* ===== TẠO 2 TRANG ===== */
 function doublePage(top,bottom){
   const s = document.createElement("div");
   s.className = "sheet double";
@@ -153,27 +135,13 @@ function doublePage(top,bottom){
     <div class="page"><img src="${top}"></div>
     <div class="page"><img src="${bottom}"></div>
   `;
-  s.addEventListener("click", clickHandler);
   book.appendChild(s);
   sheets.push(s);
 }
 
-/* ===== CLICK LOGIC (FIX LỖI) ===== */
-function clickHandler(e){
-  if(busy) return;
-
-  const rect = book.getBoundingClientRect();
-  const y = e.clientY - rect.top;
-
-  if(y > rect.height/2){
-    next();
-  }else{
-    prev();
-  }
-}
-
+/* ===== LẬT ===== */
 function next(){
-  if(current >= sheets.length) return;
+  if(busy || current >= sheets.length) return;
   busy = true;
   sheets[current].classList.add("flipped");
   current++;
@@ -181,12 +149,35 @@ function next(){
 }
 
 function prev(){
-  if(current <= 0) return;
+  if(busy || current <= 0) return;
   busy = true;
   current--;
   sheets[current].classList.remove("flipped");
   setTimeout(()=>busy=false,1000);
 }
+
+/* ===== VUỐT ===== */
+let startY = 0;
+let endY = 0;
+const threshold = 50;
+
+/* mobile */
+book.addEventListener("touchstart", e=>{
+  startY = e.touches[0].clientY;
+});
+
+book.addEventListener("touchend", e=>{
+  endY = e.changedTouches[0].clientY;
+  const diff = startY - endY;
+  if(Math.abs(diff) < threshold || busy) return;
+  diff > 0 ? next() : prev();
+});
+
+/* desktop */
+book.addEventListener("wheel", e=>{
+  if(busy) return;
+  e.deltaY > 0 ? next() : prev();
+},{passive:true});
 
 /* ===== DỰNG SÁCH ===== */
 singlePage("images/cover.png");
