@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Flipbook Tư tưởng Hồ Chí Minh</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+/* ===== NỀN ===== */
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family:"Times New Roman", serif;
+  background:#111 url("images/hcm.jpg") center center no-repeat fixed;
+  background-size:contain;
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.35);
+  backdrop-filter: blur(10px);
+  z-index:-1;
+}
+
+/* ===== SÁCH ===== */
+.book{
+  width:640px;
+  height:900px;
+  perspective:3500px;
+  position:relative;
+}
+
+/* TỜ */
+.sheet{
+  position:absolute;
+  inset:0;
+  background:#fff;
+  transform-origin:top center;
+  transition:transform 1s ease;
+  cursor:pointer;
+  overflow:hidden;
+}
+
+/* trạng thái lật */
+.sheet.flipped{
+  transform:rotateX(-180deg);
+  pointer-events:none; /* tờ đã lật không nhận click */
+}
+
+/* ===== 1 TRANG ===== */
+.single img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+
+/* ===== 2 TRANG TRÊN–DƯỚI ===== */
+.double{
+  display:flex;
+  flex-direction:column;
+}
+
+.double .page{
+  height:50%;
+  overflow:hidden;
+}
+
+/* ép khít */
+.double .page:first-child img{ margin-bottom:-4px; }
+.double .page:last-child img{ margin-top:-4px; }
+
+.double img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+
+/* ===== NÚT NHẠC ===== */
+.music-btn{
+  position:fixed;
+  bottom:24px;
+  right:24px;
+  padding:12px 16px;
+  border-radius:30px;
+  border:1px solid rgba(255,255,255,.3);
+  background:rgba(0,0,0,.6);
+  color:#fff;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="book" id="book"></div>
+
+<button class="music-btn" id="musicBtn">🔇 Nhạc: Tắt</button>
+
+<audio id="bgm" loop>
+  <source src="audio/bgm.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+const book = document.getElementById("book");
+const sheets = [];
+let current = 0;
+let z = 1000;
+let busy = false;
+
+/* ===== TẠO 1 TRANG ===== */
+function singlePage(src, clickable=true){
+  const s = document.createElement("div");
+  s.className = "sheet single";
+  s.style.zIndex = z--;
+  s.innerHTML = `<img src="${src}">`;
+  if(clickable) s.addEventListener("click", clickHandler);
+  else s.style.pointerEvents="none";
+  book.appendChild(s);
+  sheets.push(s);
+}
+
+/* ===== TẠO 2 TRANG ===== */
+function doublePage(top,bottom){
+  const s = document.createElement("div");
+  s.className = "sheet double";
+  s.style.zIndex = z--;
+  s.innerHTML = `
+    <div class="page"><img src="${top}"></div>
+    <div class="page"><img src="${bottom}"></div>
+  `;
+  s.addEventListener("click", clickHandler);
+  book.appendChild(s);
+  sheets.push(s);
+}
+
+/* ===== CLICK LOGIC (FIX LỖI) ===== */
+function clickHandler(e){
+  if(busy) return;
+
+  const rect = book.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+
+  if(y > rect.height/2){
+    next();
+  }else{
+    prev();
+  }
+}
+
+function next(){
+  if(current >= sheets.length) return;
+  busy = true;
+  sheets[current].classList.add("flipped");
+  current++;
+  setTimeout(()=>busy=false,1000);
+}
+
+function prev(){
+  if(current <= 0) return;
+  busy = true;
+  current--;
+  sheets[current].classList.remove("flipped");
+  setTimeout(()=>busy=false,1000);
+}
+
+/* ===== DỰNG SÁCH ===== */
+singlePage("images/cover.png");
+
+for(let i=1;i<=32;i+=2){
+  doublePage(`images/${i}.png`,`images/${i+1}.png`);
+}
+
+singlePage("images/back.png", false);
+
+/* ===== NHẠC ===== */
+const bgm = document.getElementById("bgm");
+const btn = document.getElementById("musicBtn");
+let playing=false;
+
+btn.onclick=()=>{
+  if(!playing){
+    bgm.volume=0.4;
+    bgm.play();
+    btn.textContent="🔊 Nhạc: Bật";
+  }else{
+    bgm.pause();
+    btn.textContent="🔇 Nhạc: Tắt";
+  }
+  playing=!playing;
+};
+</script>
+
+</body>
+</html>
